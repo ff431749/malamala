@@ -1,76 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>咱们去哪玩!</title>
   <style>
-    html,
-    body,
-    #container {
+    html, body, #app, #container {
       width: 100%;
       height: 100%;
-      padding: 0;
       margin: 0;
+      padding: 0;
+    }
+
+    .controls {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   </style>
 </head>
 
 <body>
-  <div id="container"></div>
-  <div style="position: absolute;top: 0;right: 0;padding:20px 20px 0 0;">
-    <span>半径(公里):</span>
-    <input type="number"  id="radius" value="250">
-    <input type="button" id="btn" value="确定">
+  <div id="app">
+    <div id="container"></div>
+    <div class="controls">
+      <span>半径(公里):</span>
+      <input type="number" v-model.number="radius">
+      <button @click="updateCircle">确定</button>
+    </div>
   </div>
+
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.js"></script>
+
+  <script>
+    // 高德安全码
+    window._AMapSecurityConfig = {
+      securityJsCode: "7516e99af5d458f888a791254bcbd4f5",
+    };
+
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const radius = ref(250);
+        let map = null;
+        let circle = null;
+        const luoyangPath = [112.44, 34.62];
+
+        // 动态加载高德 Loader
+        function loadAMapLoader() {
+          return new Promise((resolve, reject) => {
+            if (window.AMapLoader) return resolve(window.AMapLoader);
+            const script = document.createElement("script");
+            script.src = "https://webapi.amap.com/loader.js";
+            script.onload = () => resolve(window.AMapLoader);
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        // 初始化地图
+        async function initMap() {
+          try {
+            const AMapLoader = await loadAMapLoader();
+            const AMap = await AMapLoader.load({
+              key: "539de6849d77fde3d475c7e786ba003c",
+              version: "2.0",
+            });
+
+            map = new AMap.Map("container", {
+              center: luoyangPath,
+              zoom: 8.8,
+            });
+
+            circle = new AMap.Circle({
+              center: new AMap.LngLat(luoyangPath[0], luoyangPath[1]),
+              radius: radius.value * 1000,
+              strokeColor: "#66CCFF",
+              strokeOpacity: 1,
+              strokeWeight: 3,
+              fillColor: "#66CCFF",
+              fillOpacity: 0.35,
+            });
+
+            map.add(circle);
+          } catch (err) {
+            console.error("地图加载失败:", err);
+          }
+        }
+
+        // 更新半径
+        function updateCircle() {
+          if (circle && map) {
+            circle.setRadius(radius.value * 1000);
+            // map.setCenter(luoyangPath);
+          }
+        }
+
+        onMounted(() => {
+          initMap();
+        });
+
+        return {
+          radius,
+          updateCircle
+        };
+      }
+    }).mount("#app");
+  </script>
 </body>
-<script type="text/javascript">
-  window._AMapSecurityConfig = {
-    securityJsCode: "7516e99af5d458f888a791254bcbd4f5",
-  };
-</script>
-<script src="https://webapi.amap.com/loader.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.js"></script>
-<script type="text/javascript">
-  
-  function renderMap( radius = 250) {
-    AMapLoader.load({
-      key: "539de6849d77fde3d475c7e786ba003c", //申请好的Web端开发者 Key，调用 load 时必填
-      version: "2.0", //指定要加载的 JS API 的版本，缺省时默认为 1.4.15
-    })
-      .then((AMap) => {
-        const luoyangPath =
-          [112.44, 34.62]
-        //构造矢量圆形
-        const circleColor = "#66CCFF";
-        var circle = new AMap.Circle({
-          center: new AMap.LngLat(luoyangPath[0], luoyangPath[1]), //圆心位置
-          radius: 1000 * radius, //半径 单位:米
-          strokeColor: circleColor, //线颜色
-          strokeOpacity: 1, //线透明度
-          strokeWeight: 3, //线粗细度
-          fillColor: circleColor, //填充颜色
-          fillOpacity: 0.35, //填充透明度
-        });
-        const map = new AMap.Map("container", {
-          center: luoyangPath, //地图中心点
-          zoom: 8.8, //地图级别
-        });
-        map.add(circle);
-      })
-      .catch((e) => {
-        console.error(e); //加载错误提示
-      });
-  }
-  $(()=>{
-    renderMap()
-  })
-  $("#btn").click(() => {
-    const radius = $("#radius").val()
-    renderMap(radius)
-  })
-</script>
 
 </html>
